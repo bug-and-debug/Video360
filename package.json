@@ -21,6 +21,7 @@
     "config": "^1.30.0",
     "cookie-parser": "^1.4.3",
     "cors": "^2.8.3",
+    "cryptr": "^3.0.0",
     "curlrequest": "^1.0.1",
     "express": "^4.15.2",
     "express-fileupload": "^0.1.3",
