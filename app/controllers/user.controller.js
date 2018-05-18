@@ -119,7 +119,7 @@ const login = async function(req, res) {
     }
 
     params = _.pickBy(params, v => v !== undefined)
-    let user = await UserModel.findOne(params).exec();
+    let user = await UserModel.findOne(params, { password:0 }).exec();
 
     if(user == null) {
       res.status(400).send({msg: 'invalid username or password'})
