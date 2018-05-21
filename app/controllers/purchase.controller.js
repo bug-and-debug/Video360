@@ -60,13 +60,11 @@ const create = async function(req, res) {
 
 const getViews = async function(req, res) {
   try {
-    let { user_id, purchase_code } = req.body;
-    if (user_id === undefined)
-      res.status(400).send({msg: 'user_id is required'})
+    let { purchase_code } = req.body;
     if (purchase_code === undefined)
       res.status(400).send({msg: 'purchase_code is required'})
 
-    let purchase = await PurchaseModel.findOne({user_id: user_id, code: purchase_code}).exec();
+    let purchase = await PurchaseModel.findOne({code: purchase_code}).exec();
     if (!purchase) {
       console.log('no purchase record')
       res.status(400).send({msg: 'no purchase record'});
@@ -76,7 +74,7 @@ const getViews = async function(req, res) {
   } catch(err) {
     ErrorHelper.handleError(res, err, 400);
   }
-}   
+}
 
 const destroy = async function(req, res) {
   try {
