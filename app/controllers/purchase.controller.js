@@ -32,7 +32,6 @@ const get = async function(req, res) {
 };
 
 const create = async function(req, res) {
-  console.log('create purchase');
   let { user_id, view_ids, type} = req.body
 
   if (user_id === undefined)
@@ -48,8 +47,13 @@ const create = async function(req, res) {
     if (!user)
       res.status(400).send({msg: 'invalid user'});
 
-    let purchaseCode = randomize('Aa0', 8);
-    let purchase = new PurchaseModel(Object.assign(req.body, {code: purchaseCode}));
+    let purchaseCode = randomize('0', 8);
+    let viewIds = []
+    view_ids.forEach(view_id => {
+      viewIds.push({view_id: view_id, code: randomize('0', 8)})
+    })
+
+    let purchase = new PurchaseModel({user_id: user_id, view_ids: viewIds, type: type, code: purchaseCode});
     await purchase.save();
     res.send(purchase);
   }
@@ -64,13 +68,42 @@ const getViews = async function(req, res) {
     if (purchase_code === undefined)
       res.status(400).send({msg: 'purchase_code is required'})
 
-    let purchase = await PurchaseModel.findOne({code: purchase_code}).exec();
+    let purchase = await PurchaseModel.findOneAndRemove({code: purchase_code}).exec(); // try bundle
     if (!purchase) {
-      console.log('no purchase record')
-      res.status(400).send({msg: 'no purchase record'});
-    }
+      let purchases = await PurchaseModel.find().lean().exec();
+      if (!purchases)
+        res.status(400).send({msg: 'no purchase record'});
 
-    res.send(purchase);
+      let view_id = undefined
+      let record_id = undefined
+      purchases.forEach(record => {
+        record['view_ids'].forEach(view => {
+          if (view['code'] === purchase_code) {
+            view_id = view['view_id']
+            record_id = record['_id']
+          }
+        })
+      })
+
+      if (view_id === undefined) {
+        res.status(400).send({msg: 'no purchase record'});
+      } else {
+        let selectedPurchase = await PurchaseModel.findById(record_id).exec();
+        if (!selectedPurchase)
+          res.status(400).send({msg: 'no purchase record'});
+        let newViewIds = selectedPurchase['view_ids'].filter(v => v['view_id'] !== view_id).filter(val => !!val)
+
+        selectedPurchase.update({view_ids: newViewIds})
+        await selectedPurchase.save()
+
+        res.send(view_id);
+      }
+    } else {
+      let bundleViewIds = purchase['view_ids'].map(v => v['view_id'])
+      if (bundleViewIds.length === 1)
+        bundleViewIds = bundleViewIds[0]
+      res.send(bundleViewIds);
+    }
   } catch(err) {
     ErrorHelper.handleError(res, err, 400);
   }
